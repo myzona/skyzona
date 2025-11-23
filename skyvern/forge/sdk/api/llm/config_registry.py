@@ -860,7 +860,7 @@ if settings.ENABLE_GEMINI:
     LLMConfigRegistry.register_config(
         "GEMINI_2.5_FLASH_PREVIEW",
         LLMConfig(
-            "gemini/gemini-2.5-flash-preview-05-20",
+            "gemini/gemini-2.5-flash",
             ["GEMINI_API_KEY"],
             supports_vision=True,
             add_assistant_prefix=False,
