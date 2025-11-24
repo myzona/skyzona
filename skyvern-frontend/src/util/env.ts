@@ -1,27 +1,41 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string;
+const windowOrigin =
+  typeof window !== "undefined" && window.location
+    ? window.location.origin.replace(/\/$/, "")
+    : undefined;
+
+const normalizeBase = (value: string) => value.replace(/\/$/, "");
+const ensurePath = (value: string) => (value.startsWith("/") ? value : `/${value}`);
+const joinBaseAndPath = (base: string, path: string) =>
+  `${normalizeBase(base)}${ensurePath(path)}`;
+
+const rawApiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const apiBaseUrl = rawApiBaseUrl ?? (windowOrigin ? joinBaseAndPath(windowOrigin, "/api/v1") : "");
 
 if (!apiBaseUrl) {
-  console.warn("apiBaseUrl environment variable was not set");
+  throw new Error(
+    "VITE_API_BASE_URL was not set and the UI is not served from the same origin as the API.",
+  );
 }
 
-const environment = import.meta.env.VITE_ENVIRONMENT as string;
-
-if (!environment) {
-  console.warn("environment environment variable was not set");
-}
+const environment =
+  (import.meta.env.VITE_ENVIRONMENT as string | undefined)?.trim() ?? "production";
 
 const buildTimeApiKey: string | null =
   typeof import.meta.env.VITE_SKYVERN_API_KEY === "string"
     ? import.meta.env.VITE_SKYVERN_API_KEY
     : null;
 
-const artifactApiBaseUrl = import.meta.env.VITE_ARTIFACT_API_BASE_URL;
+const rawArtifactApiBaseUrl =
+  (import.meta.env.VITE_ARTIFACT_API_BASE_URL as string | undefined)?.trim();
+const artifactApiBaseUrl =
+  rawArtifactApiBaseUrl ?? (windowOrigin ? joinBaseAndPath(windowOrigin, "/artifacts") : "");
 
 if (!artifactApiBaseUrl) {
   console.warn("artifactApiBaseUrl environment variable was not set");
 }
 
-const apiPathPrefix = import.meta.env.VITE_API_PATH_PREFIX ?? "";
+const rawApiPathPrefix = (import.meta.env.VITE_API_PATH_PREFIX as string | undefined)?.trim();
+const apiPathPrefix = rawApiPathPrefix ? ensurePath(rawApiPathPrefix) : "";
 
 const API_KEY_STORAGE_KEY = "skyvern.apiKey";
 
@@ -30,17 +44,28 @@ const lsKeys = {
   apiKey: API_KEY_STORAGE_KEY,
 };
 
-const wssBaseUrl = import.meta.env.VITE_WSS_BASE_URL;
+const rawWssBaseUrl = (import.meta.env.VITE_WSS_BASE_URL as string | undefined)?.trim();
+const derivedWsOrigin = windowOrigin ? windowOrigin.replace(/^http/, "ws") : undefined;
+const wssBaseUrl =
+  rawWssBaseUrl ?? (derivedWsOrigin ? joinBaseAndPath(derivedWsOrigin, "/api/v1") : "");
+
+if (!wssBaseUrl) {
+  console.warn("wssBaseUrl environment variable was not set");
+}
 
 let newWssBaseUrl = wssBaseUrl;
-try {
-  const url = new URL(wssBaseUrl);
-  if (url.pathname.startsWith("/api")) {
-    url.pathname = url.pathname.replace(/^\/api/, "");
+if (wssBaseUrl) {
+  try {
+    const url = new URL(wssBaseUrl);
+    if (url.pathname.startsWith("/api")) {
+      url.pathname = url.pathname.replace(/^\/api/, "");
+    }
+    newWssBaseUrl = url.toString();
+  } catch (e) {
+    newWssBaseUrl = wssBaseUrl.replace("/api", "");
   }
-  newWssBaseUrl = url.toString();
-} catch (e) {
-  newWssBaseUrl = wssBaseUrl.replace("/api", "");
+} else {
+  newWssBaseUrl = "";
 }
 
 // Base URL for the Runs API (strip a leading `/api` segment: /api/v1 -> /v1)
