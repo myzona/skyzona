@@ -132,7 +132,10 @@ services:
       timeout: 5s
       retries: 5
   skyvern-ui:
-    image: public.ecr.aws/skyvern/skyvern-ui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: skyvern-ui:local
     restart: on-failure
     ports:
       - 8081:8080
@@ -156,7 +159,7 @@ services:
     # - VITE_WSS_BASE_URL=ws://localhost:8000/api/v1
     #   - VITE_ARTIFACT_API_BASE_URL=http://localhost:9090
     #   - VITE_API_BASE_URL=http://localhost:8000/api/v1
-    #   - VITE_SKYVERN_API_KEY=<get this from "settings" in the Skyvern UI>
+     #   - VITE_SKYVERN_API_KEY=<get this from "settings" in the Skyvern UI>
     depends_on:
       skyvern:
         condition: service_healthy
